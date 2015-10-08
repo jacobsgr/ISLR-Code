@@ -1,0 +1,414 @@
+#Chapter 3  ISLR code
+
+#Question 8
+
+library(ISLR)
+data(Auto)
+
+a <- lm(mpg ~ horsepower, data = Auto)
+summary(a)
+
+confint(a, 'horsepower', level=0.95) #Confidence Inverval
+predict(a, data.frame(horsepower = 98), interval="confidence")
+
+#There is a relationship between mpg and horsepower with a p value < 0.00 - F Statistic == 599.7 
+#For the overall effect - R squared == .6049 which means that the model explains about 60 percent of the variance
+#Negative - More horsepower leads to worse gas mileage
+# yhat = 24.46708, lwr = 23.97308, upr =  24.96108
+
+# 8 - b 
+plot(mpg ~ horsepower, data = Auto)
+abline(a)
+
+par(mfrow=c(2,2))
+plot(a) #Returns Diagnostic Plots
+boxplot(Auto$horsepower)
+
+#The Residuals versus Fitted Values indcates non-linear trend in the data
+#Normal QQ plots indicate that the error terms are about normally distributed with some Kurtosis in the data
+#Non-Constant Variance
+#Leverage Plot suggests there may be some outliers in the dataset!
+
+#Question  9
+
+pairs(Auto)
+cor(Auto[,1:8])
+
+b <- lm(mpg~cylinders + displacement + horsepower + weight + acceleration + year, data = Auto)
+summary(b)
+
+#There is a relationship with an F stat = 272.2, pvalue < .05
+#The two variables that seem to be related are weight and year with p values < 0.05
+#The coefficient suggests that the newere the car, the better the gas mileage
+
+# 9 - D
+
+par(mfrow = c(2,2))
+plot(b)
+
+#There is deviation from normality in the QQ plot at the end suggesting kurtosis in the dist of errors
+#Residuals Fits suggest 323, and 227 as potential outlers
+#The leverage plot suggests number 14 as a high leverage point - but with relatively low error so it 
+#doesn't effect the fit too much
+
+# 9 - e
+c <- lm(mpg~cylinders + displacement + horsepower + weight + acceleration + year+ horsepower:weight + horsepower:acceleration + cylinders:weight, data = Auto)
+summary(c)
+
+#So all the interactions included are statistically significant
+#Horsepower:weight is positively associated with gasmileage surprisingly
+#Horsepower:acceleration is negatively related with MPG
+#cylinders:wight is positively related to MPG
+
+#9 - f
+
+d <- lm(mpg~cylinders + displacement + sqrt(horsepower) + weight + acceleration + year, data = Auto)
+summary(d)
+e <- lm(mpg~cylinders + displacement + horsepower + I(weight^2) + acceleration + year, data = Auto)
+summary(e)
+f <- lm(mpg~cylinders + displacement + horsepower + weight + log(acceleration) + year, data = Auto)
+summary(f)
+
+#Interestingly the transformations still hold significance on the variables that have the interactions, and
+#Unfortunately, the overall fit is generally worse than the base model R Squared < 80 %
+#Suggesting that the transformations that I picked here did not match the data very well
+
+#By far, the interactions do the best to explain the data and provide the best overall fit!
+
+#Trying the log of the response variable
+
+g <- lm(log(mpg)~cylinders + displacement + horsepower + weight + acceleration + year, data = Auto)
+summary(g)
+
+#Much better fit - Rsquared  = 87 %
+par(mfrow=c(2,2))
+plot(g)
+
+#The assumptions of the linear model look to be met - Homoscedasticity, normality, No outier/high leverage
+
+
+#10
+rm(list=ls())
+data(Carseats)
+
+a <- lm(Sales ~ Price + Urban + US, data = Carseats)
+summary(a)
+
+#Price is neagtively linearly related to Sales - An increase in one unit of price leads to -.05 units Sales
+#Urban is not significant - but indicates that the average sales are less in Urban areas, outside the US
+#US is significant indicating that in rural areas of the US, sales are higher than in rural NONUS areas
+
+#10 - c 
+#Sales = 13.04 - 0.054Price - 0.02Urban + 1.2US 
+
+#10 - D
+#Both price and US are statistically significant
+
+#10 -E
+b <- lm(Sales ~Price + US, data = Carseats)
+summary(b)
+
+#This fits the data almost exactly the same with R Squared's equal to one another
+
+#10 - G 
+confint(b, 'Price', level=0.95) #Confidence Inverval         
+#Price -0.06475984 -0.04419543
+confint(b, 'USYes', level=0.95) #Confidence Inverval
+#USYes 0.6915196 1.707766
+
+#10 - H
+par(mfrow=c(2,2))
+plot(b)
+
+#obs 377, 51, 69 appear to be outliers - though they do not have high leverage
+
+#11 - A
+set.seed(1) #for reproducible numbers
+x <- rnorm(100)
+y = 2*rnorm(100)
+
+a <- lm(y ~ x + 0)
+summary(a)
+
+#B = 0.08167 with std error = 2.0426 and p value > 0.05 
+
+b <- lm(x ~ y + 0)
+summary(b)
+
+#11 - c
+
+#The relationship is interesting - the t and p values are the same indicating that the models
+#significance does not change
+
+# if y = bx + e, then x = (y - e)/b and the lines are just moving the axis around simple alegebra
+
+# 11 - D
+
+(sqrt(99)*sum(x*y)) / sqrt((sum(x^2)*sum(y^2)) - (sum(x*y)^2))
+
+# 11 - E
+
+#We can say that since we are basically switch the x and the y, 
+#and the equation is what is presented above - that the t stat returned
+#will be the same since the commutative property of algebra
+
+#11 - F
+
+c <- lm(x~y)
+d <- lm(y~x)
+summary(c)
+summary(d)
+
+#The same
+
+#Question 12
+
+#A - When the variance of X  equals the variance of y
+
+#B  -
+
+set.seed = 4
+
+x <- rnorm(100)
+y <- rnorm(100)
+
+a <- lm(y ~ x)
+b <- lm(x ~ y)
+a
+b
+
+x <- rnorm(100)
+y <- -sample(x, 100)
+
+a <- lm(y ~ x + 0)
+b <- lm(x ~ y + 0)
+a
+b
+
+#13
+
+set.seed(1)
+
+#A 
+
+x <- rnorm(100)
+eps <- rnorm(100, sd = .25)
+y = -1 + 0.5*x + eps
+
+#y = 100, b0 = -1, b1 = .5
+
+plot(x, y)
+
+#A strong linear positive relationship x and y
+
+a <- lm(y ~ x)
+summary(a)
+
+#Pretty Close to the actual model
+
+plot(x, y)
+abline(a, col = 'red')
+abline(a = -1, b = 0.5, col = 'blue')
+legend(x = 2, y = 2, legend = c("x", "y"))
+
+#polynomial
+
+b <- lm(y ~ x + I(x^2))
+summary(b)
+
+#No - the coeff is not significant and the R squared value has not moved much
+
+# 13 - H - less noise
+
+set.seed(1)
+
+#Less
+
+x <- rnorm(100)
+eps <- rnorm(100, sd = .1)
+y = -1 + 0.5*x + eps
+
+b <- lm(y ~ x)
+
+#More
+
+x <- rnorm(100)
+eps <- rnorm(100, sd = .5)
+y = -1 + 0.5*x + eps
+
+c <- lm(y ~ x)
+
+
+summary(a)
+summary(b)
+summary(c)
+
+#The coefficients stay stable generally speaking - the confits shrink with less noise and grow with more noise
+#This makes sense since the  y variable is tighter - fitting the data to the tight fit reduces SD around
+#the y variable at that point x meaning the confidence interval shrinks.
+
+#Something to point out - we are shrinking the irreducible error here (the variance of the population)
+#This is usually not doable in the real world where the data generation process is unknown. 
+
+# 14
+
+set.seed(1)
+x1 = runif(100)
+x2 = .5*x1 + rnorm(100)/10
+
+
+y = 2 + 2*x1 + 0.3*x2 + rnorm(100)
+
+#b0 = 2, b1 = 2, b2 = 0.3 
+
+cor(x1, x2)
+
+plot(x1, x2)
+
+t <- lm(y ~ x1 + x2)
+summary(t) # b0 = 2.13, b1 = 1.45, b2 = 1.009
+
+#These coeffs are kind of far away from the true population 
+#Especially b2 which is 2 units away
+
+#We can not reject the null hypothesis that b2 is 0 - which is a problem since it was used in the data 
+#generation process!!!!!!!!
+
+v <- lm(y ~ x1)
+summary(v) #highly significant x1
+
+w <- lm(y ~ x2)
+summary(w) #highly significant
+
+#F - the answers contradict one another since both variable are highly significant but the 
+#multiple linear regression model says x2 does not mean anything. 
+
+#This is inherent in the correlation between x1, and x2. Since it is so high - the predictors are too similar 
+#for the estimation procedure to do anything. Collinearity is the problem. 
+
+#The best we can do is remove of the variables to take away the collinearity by removing a variable
+#We can figure this out using VIF
+library(car)
+vif(t)
+
+#Pretty big VIF factors  - so we have to remove one
+x1 = c(x1, 0.1)
+x2 = c(x2, 0.8)
+y = c(y,6)
+
+a <- lm(y ~ x1 + x2)
+b <- lm(y ~ x1)
+c <- lm(y ~ x2)
+
+summary(a)
+summary(b)
+summary(c)
+
+#switches the significance around on the overall regression and does not change the results for the 
+#subsetted regression
+
+plot(a)#101 is both a high leverage and high residual (oiutlier) term meaning that is very unusual in comparison to the rest
+			 #of the datasets! 
+
+
+plot(b) # fairly large leverage point - but not enough to be outside
+				# cooks distance
+
+plot(c) # is an outlier
+
+#The new point seems to be very unusual for x1, and not x2 
+
+# Quesiton 15
+
+data(Boston)
+
+fit.zn <- lm(crim ~ zn, data = Boston)
+fit.indus <- lm(crim ~ indus, data = Boston)
+fit.chas <- lm(crim ~ chas, data = Boston)
+fit.nox <- lm(crim ~ nox, data = Boston)
+fit.rm <- lm(crim ~ rm, data = Boston)
+fit.dis<- lm(crim ~ dis, data = Boston)
+fit.age <- lm(crim ~ age, data = Boston)
+fit.rad<- lm(crim ~ rad, data = Boston)
+fit.tax <- lm(crim ~ tax, data = Boston)
+fit.ptratio <- lm(crim ~ ptratio, data = Boston)
+fit.black <- lm(crim ~ black, data = Boston)
+fit.lstat <- lm(crim ~ lstat, data = Boston)
+fit.medv <- lm(crim ~ medv, data = Boston)
+
+summary(fit.zn) # Yes
+summary(fit.indus) # Yes
+summary(fit.chas)
+summary(fit.nox)# Yes
+summary(fit.rm)# Yes
+summary(fit.dis) # Yes
+summary(fit.age) # Yes
+summary(fit.rad)# Yes
+summary(fit.tax)# Yes
+summary(fit.ptratio)# Yes
+summary(fit.black)# Yes
+summary(fit.lstat)# Yes
+summary(fit.medv)# Yes
+
+#All the above have p values < 0.05 except chas 
+
+fit.all <- lm(crim ~ ., data = Boston)
+
+#Not all are significant anymore 
+# Significant = zn, nox(marginally), dis , rad, black, lstat (marginal), medv
+
+coeffs.all <- summary(fit.all)$coefficients
+coeffs.all <- summary(fit.all)$coefficients
+
+simple.reg <- vector('numeric', 0)
+simple.reg <- c(simple.reg, fit.zn$coefficient[2])
+simple.reg <- c(simple.reg, fit.indus$coefficient[2])
+simple.reg <- c(simple.reg, fit.chas$coefficient[2])
+simple.reg <- c(simple.reg, fit.nox$coefficient[2])
+simple.reg <- c(simple.reg, fit.rm$coefficient[2])
+simple.reg <- c(simple.reg, fit.age$coefficient[2])
+simple.reg <- c(simple.reg, fit.dis$coefficient[2])
+simple.reg <- c(simple.reg, fit.rad$coefficient[2])
+simple.reg <- c(simple.reg, fit.tax$coefficient[2])
+simple.reg <- c(simple.reg, fit.ptratio$coefficient[2])
+simple.reg <- c(simple.reg, fit.black$coefficient[2])
+simple.reg <- c(simple.reg, fit.lstat$coefficient[2])
+simple.reg <- c(simple.reg, fit.medv$coefficient[2])
+mult.reg <- vector("numeric", 0)
+mult.reg <- c(mult.reg, fit.all$coefficients)
+mult.reg <- mult.reg[-1]
+plot(simple.reg, mult.reg, col = "red")
+
+#The multiple linear regression model is running the data, controlling for all the other predictors. Hence
+#why some of the predictors are not significant when before they were. The SLRs ignore the other variables when
+#determining their coefficient fits
+
+# 15 - D
+
+fit.zn <- lm(crim ~ poly(zn, 3), data = Boston)
+fit.indus <- lm(crim ~ poly(indus, 3), data = Boston)
+#fit.chas <- lm(crim ~ poly(chas, 3), data = Boston)
+fit.nox <- lm(crim ~ poly(nox, 3), data = Boston)
+fit.rm <- lm(crim ~ poly(rm, 3), data = Boston)
+fit.dis<- lm(crim ~ poly(dis, 3), data = Boston)
+fit.age <- lm(crim ~ poly(age, 3), data = Boston)
+fit.rad<- lm(crim ~ poly(rad, 3), data = Boston)
+fit.tax <- lm(crim ~ poly(tax, 3), data = Boston)
+fit.ptratio <- lm(crim ~poly(ptratio, 3), data = Boston)
+fit.black <- lm(crim ~ poly(black, 3), data = Boston)
+fit.lstat <- lm(crim ~ poly(lstat, 3), data = Boston)
+fit.medv <- lm(crim ~ poly(medv, 3), data = Boston)
+
+summary(fit.zn) # Yes
+summary(fit.indus) # Yes
+summary(fit.chas)
+summary(fit.nox)# Yes
+summary(fit.rm)# Yes
+summary(fit.dis) # Yes
+summary(fit.age) # Yes
+summary(fit.rad)# Yes
+summary(fit.tax)# Yes
+summary(fit.ptratio)# Yes
+summary(fit.black)# Yes
+summary(fit.lstat)# Yes
+summary(fit.medv)# Yes
