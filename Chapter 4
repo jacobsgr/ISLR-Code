@@ -1,0 +1,326 @@
+#Chapter 4 - ISLR
+
+require(ISLR)
+
+data(Weekly)
+
+
+#summary - 10 - A
+
+summary(Weekly)
+dim(Weekly)
+cor(Weekly[,-9]) #Here we remove the Direction UP/DOWN vector from the data.frame
+
+
+pairs(Weekly)
+
+#From the correlations and the pairs of graphs - there doesn't seem to be much going on
+#Remember this is data that is looking at the stocks and trying to find patterns in stocks is 
+#Difficult. This could really just be random noise.  
+
+#That being said - Year and Volume seem to be correlated. 
+
+#10 - B - Logistic Regression
+
+a <- glm(Direction~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, data= Weekly, family = 'binomial')
+summary(a)
+
+#The only variable that appears to have significance is..
+#Lag2 - So here Lagged two weeks prior appears to have some predictions for Direction of the 
+#market
+
+preds <- predict(a, type = 'response') #This is a vector - Pr(y = 1 | x)
+contrasts(Weekly$Direction) #Make sure that the contrasts are correct
+
+glm.pred <- rep("Down", 1089)
+glm.pred[preds > 0.5] = "Up" #If the estimated probs are greaters .5 (our threshold) - assign to Yes
+														 #This is effectively arbitrary - could use diff thresholds for predictive purposes
+
+table(glm.pred, Weekly$Direction)
+
+#Well lets see here - 
+
+mean(glm.pred == Weekly$Direction) #Training Dataset
+#The model accurately predicts the correct Direction .56 of the time
+#So the model's accuracy is a little better than half
+
+#Notice that the dataset seems to incorrectly find Up, when data is actually Down
+
+#glm.pred incorrectly said labelled 430 obs 'Down' when should be 'UP' or
+
+54/(54+430) #It caught 11% of the true observations - Massive Type 2 Error
+
+#The model does a better job on finding the Proper Up Direction
+
+557/(557+48) #Model does much better at predicting in the opposite direction
+
+#10 - D
+
+train2008 <-(Weekly$Year < 2009) #Logical
+test <- Weekly[!train2008,]
+Direction.test <- Weekly$Direction[!train2008]
+
+a.2008 <- glm(Direction~ Lag2 , data= Weekly, family = 'binomial', subset = Year < 2009)
+summary(a.2008)
+
+
+preds <- predict(a.2008, test, type = 'response') #How we test on the training data
+contrasts(Weekly$Direction) #Make sure that the contrasts are correct
+
+glm.pred <- rep("Down", 104)
+glm.pred[preds > 0.5] = "Up" #If the estimated probs are greaters .5 (our threshold) - assign to Yes
+														 #This is effectively arbitrary - could use diff thresholds for predictive purposes
+
+table(glm.pred, test$Direction)
+
+mean(glm.pred == test$Direction) # 62.5 % are correct
+mean(glm.pred != test$Direction) # 37.5 % are incorrect
+
+
+# 10 - E - LDA
+
+require(MASS)
+lda.fit <- lda(Direction ~ Lag2, data = Weekly, subset = train2008)
+
+plot(lda.fit) #look very similar
+
+lda.pred <- predict(lda.fit, test) #Run the predictions on the leave out stuff
+
+#grab just the classifications
+
+class <- lda.pred$class
+
+table(class, Direction.test)
+mean(class == test$Direction) #.625 - Does no better
+mean(class != test$Direction) #.625 - Does no better
+
+#10 - F - QDA
+
+qda.fit <- qda(Direction ~ Lag2, data = Weekly, subset = train2008)
+qda.pred <- predict(qda.fit, test) #Run the predictions on the leave out stuff
+
+class <- qda.pred$class
+
+table(class, Direction.test)
+mean(class == test$Direction) #.58 Much Worse
+mean(class != test$Direction) 
+
+#10 - H - KNN == 1
+
+require(class)
+
+attach(Weekly) #Dangerous
+
+train.x <- cbind(Lag1)[train2008,]
+test.x <- cbind(Lag2)[!train2008,]
+train.Direction <- Direction[train2008]
+
+set.seed(1)
+
+knn.pred <- knn(data.frame(train.x), data.frame(test.x), train.Direction, k = 1)
+table(knn.pred, Direction.test)
+
+mean(knn.pred == Direction.test) #.57 is the correct rate
+																 #.42 is the error rate
+
+detach(Weekly)
+
+#The method related to LDA and Logistic seem to perform the best overall on this dataset
+
+
+#11
+
+data(Auto)
+
+greater.than <- (Auto$mpg > median(Auto$mpg))
+Auto$mpg01[greater.than] <- 1
+Auto$mpg01[!greater.than] <- 0
+
+pairs(Auto)
+
+#The graph of all the scatterplots suggests a few predictors
+
+# mpg (obv), displacement (negative), horsepower (negative), acceleration (negative)
+
+#Investigate with boxplot
+
+boxplot(displacement~mpg01,data=Auto, col = mpg01)
+boxplot(horsepower~mpg01,data=Auto)
+boxplot(acceleration~mpg01,data=Auto)
+
+#11 - C - splitting into Test/Training
+test <- sample(1:262, 130)
+train.auto <- Auto[-test,]
+test.auto <- Auto[test,]
+mpg01.test <- test.auto$mpg01
+mpg01.train <- train.auto$mpg01
+
+#11 - D - LDA
+
+require(MASS)
+lda.fit <- lda(mpg01 ~ displacement + horsepower + acceleration, data = train.auto)
+
+lda.prediction <- predict(lda.fit, test.auto)
+
+names(lda.prediction)
+table(lda.prediction$class, mpg01.test)
+
+mean(lda.prediction$class == mpg01.test) #0.8625 - Pretty good Test MSE
+
+#11 - E - QDA
+
+qda.fit <- qda(mpg01 ~ displacement + horsepower + acceleration, data = train.auto)
+qda.prediction <- predict(qda.fit, test.auto)
+
+table(qda.prediction$class, mpg01.test)
+
+mean(qda.prediction$class == mpg01.test) #.8875 - even better
+
+
+#11 - F - Logistic Regression
+
+log.fit <- glm(mpg01 ~ displacement + horsepower + acceleration, data = train.auto, 
+							 family = 'binomial')
+log.prediction <- predict(log.fit, test.auto, type = 'response')
+glm.pred <- rep(0, 130) # number to repicate matches vector size of preds!!!
+glm.pred[log.prediction > 0.5] = 1 #If the estimated probs are greaters .5 (our threshold) - assign to Yes
+
+table(glm.pred, mpg01.test) #Remember the threshold matters here
+
+mean(glm.pred == mpg01.test)# 0.9 really good - about the same as the QDA model
+
+
+#11 - G - KNN - I report the success rate
+library(class)
+set.seed(1)
+knn.pred <- knn(train.auto[,1:8], test.auto[,1:8], mpg01.train, k = 1)
+table(knn.pred, mpg01.test)
+mean(knn.pred = mpg01.test) #.86
+
+
+knn.pred2 <- knn(train.auto[,1:8], test.auto[,1:8], mpg01.train, k = 2)
+table(knn.pred2, mpg01.test)
+mean(knn.pred2 == mpg01.test) #.85
+
+knn.pred3 <- knn(train.auto[,1:8], test.auto[,1:8], mpg01.train, k = 3)
+table(knn.pred3, mpg01.test)
+mean(knn.pred3 == mpg01.test) #.88
+
+knn.pred4 <- knn(train.auto[,1:8], test.auto[,1:8], mpg01.train, k = 4)
+table(knn.pred4, mpg01.test)
+mean(knn.pred4 == mpg01.test) #.88
+
+knn.pred100 <- knn(train.auto[,1:8], test.auto[,1:8], mpg01.train, k = 100)
+table(knn.pred100, mpg01.test)
+mean(knn.pred100 == mpg01.test) #.86
+
+#12 - A
+
+Power <- function(x) {
+	a <- 2^3 
+	return(a)
+}
+
+#12 - B
+
+Power2 <- function(x, a) {
+	b <- x^a 
+	print(b)
+}
+
+#12 - C
+
+Power2(10,3)
+Power2(8,17)
+Power2(131,3)
+
+#12
+
+Power3 <- function(x, a) { #Return let's use the output for a wrapped funciton like plot
+	b <- x^a 
+	return(b)
+}
+
+x <- 1:10 #had to look this one up - essentially passing the argument of x's to the y values 
+plot(x,Power3(x,2), xlab = "x", ylab = "x-squared")
+plot(log(x),log(Power3(x,2)), xlab = "x", ylab = "x-squared") #Straight Line 
+
+#12 - F
+
+PlotPower <- function(x, a) {
+	plot(x, Power3(x, a))	
+}
+
+#13 - Predict Crime Rate above/below median
+
+data(Boston)
+
+median.b <- (Boston$crim > median(Boston$crim))
+Boston$crime.median[median.b] <- 1
+Boston$crime.median[!median.b] <- 0
+
+all <- 1:506
+sample <- sample(1:506, 180)
+sample2 <- setdiff(all, sample)
+test <- Boston[sample, ] #Gives a random sample of rows - how to get the one's not sampled?
+train <- Boston[sample2,]
+
+train.crimemedian <- train$crime.median
+test.crimemedian <- test$crime.median
+
+#Logistic Regression
+
+log.b <- glm(crime.median ~ zn + indus + chas + nox + rm + age , data = train, family = 'binomial') 
+
+pred.log <- predict(log.b, test, type= "response")
+
+glm.pred <- rep(0, 180) # number to repicate matches vector size of preds!!!
+glm.pred[pred.log > 0.5] = 1 #If the estimated probs are greaters .5 (our threshold) - assign to Yes
+
+table(glm.pred, test.crimemedian) #Remember the threshold matters here
+
+mean(glm.pred == test.crimemedian)# 0.87 really good - about the same as the QDA model
+
+#The Type I rate is 
+
+72 / (12 + 72) - #Correctly Predict 85% of Yes
+	
+#LDA
+	
+lda.b <- lda(crime.median ~ zn + indus + chas + nox + rm + age , data = train)
+
+lda.pred <- predict(lda.b, test)
+
+table(lda.pred$class, test.crimemedian)
+
+mean(lda.pred$class== test.crimemedian) # .85% correct
+
+#QDA
+qda.b <- qda(crime.median ~ zn + indus + chas + nox + rm + age , data = train)
+
+qda.pred <- predict(qda.b, test)
+
+table(qda.pred$class, test.crimemedian)
+
+mean(qda.pred$class== test.crimemedian) # .83% correct
+
+#KNN
+
+set.seed(1)
+knn.pred <- knn(train, test, train.crimemedian, k = 1)
+table(knn.pred, test.crimemedian)
+mean(knn.pred == test.crimemedian) #.899
+
+set.seed(1)
+knn.pred <- knn(train, test, train.crimemedian, k = 3)
+table(knn.pred, test.crimemedian)
+mean(knn.pred == test.crimemedian) #.911
+
+set.seed(1)
+knn.pred <- knn(train, test, train.crimemedian, k = 30)
+table(knn.pred, test.crimemedian)
+mean(knn.pred == test.crimemedian) #.83
+
+#KNN seems to perform the best on classification system!!
+
+
